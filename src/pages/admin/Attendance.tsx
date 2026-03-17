@@ -16,7 +16,9 @@ import {
   Search,
   CheckCircle2,
   XCircle,
+  Pause,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
@@ -34,7 +36,7 @@ export default function AdminAttendance() {
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [startDate, setStartDate] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [shiftFilter, setShiftFilter] = useState<string>('all');
@@ -122,7 +124,7 @@ export default function AdminAttendance() {
             className="gap-2"
           >
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
-            Export to CSV
+            Export to Excel
           </Button>
         </div>
 
@@ -271,7 +273,8 @@ export default function AdminAttendance() {
                       <TableHead>Shift</TableHead>
                       <TableHead>Check In</TableHead>
                       <TableHead>Check Out</TableHead>
-                      <TableHead>Distance</TableHead>
+                      <TableHead>Break</TableHead>
+                      <TableHead>Net Work</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -307,32 +310,27 @@ export default function AdminAttendance() {
                         </TableCell>
                         <TableCell>
                           <div className="time-cell">
-                            <Clock className="w-4 h-4 text-success" />
-                            <span>
-                              {r.check_in ? format(new Date(r.check_in), 'hh:mm a') : '—'}
-                            </span>
+                            <Pause className="w-3 h-3 text-indigo-400" />
+                            <span className="text-sm">{r.break_minutes || 0}m</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="time-cell">
-                            <Clock className="w-4 h-4 text-primary" />
-                            <span>
-                              {r.check_out ? format(new Date(r.check_out), 'hh:mm a') : '—'}
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm">
+                              {Math.floor((r.worked_minutes || 0) / 60)}h {(r.worked_minutes || 0) % 60}m
                             </span>
+                            {r.work_mode === 'wfh' && (
+                              <Badge variant="outline" className="text-[10px] w-fit h-4 px-1 bg-primary/5">WFH</Badge>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
-                          {r.distance_at_check_in ? (
-                            <div className="flex items-center gap-1.5 text-sm">
-                              <MapPin className="w-4 h-4 text-muted-foreground" />
-                              <span>{r.distance_at_check_in}m</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={r.status} />
+                          <div className="flex flex-col gap-1">
+                            <StatusBadge status={r.status} />
+                            {r.is_policy_violation && (
+                              <Badge variant="destructive" className="text-[8px] h-3 px-1">VIOLATION</Badge>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

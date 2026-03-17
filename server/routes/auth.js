@@ -37,10 +37,51 @@ router.post('/login', async (req, res) => {
     }
 });
 
+router.get('/admin-exists', async (req, res) => {
+    try {
+        const adminExists = await User.exists({ role: 'admin' });
+        res.json({ exists: !!adminExists });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 router.post('/register', async (req, res) => {
-    res.status(403).json({
-        message: 'Public registration is disabled. Please contact your administrator.'
-    });
+    const { full_name, email, password } = req.body;
+
+    try {
+        const adminExists = await User.exists({ role: 'admin' });
+
+        if (adminExists) {
+            return res.status(403).json({
+                message: 'Public registration is disabled. Please contact your administrator.'
+            });
+        }
+
+        // Create the first admin
+        const user = await User.create({
+            full_name,
+            email,
+            password,
+            role: 'admin',
+            must_change_password: false // First admin doesn't need to change password immediately
+        });
+
+        res.status(201).json({
+            _id: user._id,
+            full_name: user.full_name,
+            email: user.email,
+            role: user.role,
+            token: generateToken(user._id),
+            message: 'Admin account created successfully'
+        });
+    } catch (error) {
+        console.error(error);
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'User already exists' });
+        }
+        res.status(500).json({ message: 'Server Error' });
+    }
 });
 
 router.get('/profile', protect, async (req, res) => {

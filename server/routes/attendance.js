@@ -302,48 +302,80 @@ router.post('/check-out', protect, async (req, res) => {
     }
 });
 
-router.post('/resume-break', protect, async (req, res) => {
+router.post('/start-break', protect, async (req, res) => {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const attendance = await Attendance.findOne({ user: req.user._id, date: today });
 
         if (!attendance) {
-            return res.status(404).json({ message: 'No attendance record found for today' });
+            console.log(`[StartBreak] No attendance for ${req.user.email} on ${today}`);
+            return res.status(404).json({ message: 'No attendance record found for today. Please check-in first.' });
         }
 
-        if (req.user.role !== 'employee') {
-            return res.status(403).json({ message: 'Only full-time employees have mandatory breaks' });
+        if (attendance.check_out) {
+            return res.status(400).json({ message: 'Already checked out today' });
+        }
+
+        if (attendance.is_on_break) {
+            return res.status(400).json({ message: 'Already on break' });
+        }
+
+        const totalBreakMinutes = attendance.break_minutes || 0;
+        if (totalBreakMinutes >= 45) {
+            return res.status(400).json({ message: 'Daily break limit (45 minutes) reached' });
+        }
+
+        attendance.is_on_break = true;
+        attendance.break_start = new Date();
+        await attendance.save();
+
+        res.json({
+            success: true,
+            message: 'Break started. Working timer paused.',
+            record: attendance
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.post('/resume-break', protect, async (req, res) => {
+    try {
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const attendance = await Attendance.findOne({ user: req.user._id, date: today });
+
+        if (!attendance) {
+            console.log(`[ResumeBreak] No attendance for ${req.user.email} on ${today}`);
+            return res.status(404).json({ message: 'No attendance record found for today' });
         }
 
         if (!attendance.is_on_break) {
             return res.status(400).json({ message: 'Employee is not on break' });
         }
 
-        const now = new Date();
-        const [resumeH, resumeM] = [14, 45];
-        const resumeTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), resumeH, resumeM);
-
-        if (now < resumeTime) {
-            return res.status(400).json({
-                message: 'Break period is still active. Please resume after 2:45 PM.',
-                currentTime: now.toLocaleTimeString(),
-                resumeTime: resumeTime.toLocaleTimeString()
-            });
-        }
-
         const breakStartTime = new Date(attendance.break_start);
-        const breakMinutes = Math.floor((now - breakStartTime) / 60000);
+        const thisBreakMinutes = Math.floor((now - breakStartTime) / 60000);
+        
+        const totalBreakMinutes = (attendance.break_minutes || 0) + thisBreakMinutes;
 
         attendance.break_end = now;
-        attendance.break_minutes = breakMinutes;
+        attendance.break_minutes = totalBreakMinutes;
         attendance.is_on_break = false;
 
         await attendance.save();
 
+        let message = 'Break ended. Working timer resumed.';
+        if (totalBreakMinutes > 45) {
+            message += ` Note: Total break time exceeded limit by ${totalBreakMinutes - 45} minutes.`;
+        }
+
         res.json({
             success: true,
-            message: 'Break ended. Working timer resumed.',
-            break_duration: breakMinutes,
+            message: message,
+            break_duration: totalBreakMinutes,
             record: attendance
         });
     } catch (error) {

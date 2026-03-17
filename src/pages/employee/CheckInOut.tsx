@@ -39,6 +39,8 @@ interface TodayAttendance {
   is_early_checkout?: boolean;
   final_status?: string;
   is_on_break?: boolean;
+  break_minutes?: number;
+  break_start?: string;
 }
 
 interface ShiftConfig {
@@ -149,6 +151,21 @@ export default function CheckInOut() {
     }
   };
 
+  const handleStartBreak = async () => {
+    setActionLoading(true);
+    try {
+      const { data } = await client.post('/attendance/start-break');
+      if (data?.success) {
+        toast.success(data.message);
+        fetchTodayAttendance();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to start break');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleResumeBreak = async () => {
     setActionLoading(true);
     try {
@@ -171,18 +188,33 @@ export default function CheckInOut() {
   const getWorkDuration = () => {
     if (!todayRecord?.check_in) return null;
     const startTime = new Date(todayRecord.check_in);
-    // If still on break, don't count time past break start (2:00 PM)
     let endTime = todayRecord.check_out ? new Date(todayRecord.check_out) : new Date();
-    if (todayRecord.is_on_break) {
-      const breakStart = new Date(endTime);
-      breakStart.setHours(14, 0, 0, 0);
-      if (endTime > breakStart) endTime = breakStart;
+    
+    // Total break minutes already stored + current break if active
+    let breakTotal = todayRecord.break_minutes || 0;
+    
+    if (todayRecord.is_on_break && todayRecord.break_start) {
+      const breakStart = new Date(todayRecord.break_start);
+      // While on break, work timer ends at break start
+      endTime = breakStart;
     }
+    
+    const diffMins = differenceInMinutes(endTime, startTime) - breakTotal;
 
     return {
-      hours: differenceInHours(endTime, startTime),
-      mins: differenceInMinutes(endTime, startTime) % 60,
+      hours: Math.floor(diffMins / 60),
+      mins: diffMins % 60,
     };
+  };
+
+  const getBreakTime = () => {
+    if (!todayRecord?.check_in) return 0;
+    let total = todayRecord.break_minutes || 0;
+    if (todayRecord.is_on_break && todayRecord.break_start) {
+      const start = new Date(todayRecord.break_start);
+      total += differenceInMinutes(new Date(), start);
+    }
+    return total;
   };
 
   const getShiftProgress = () => {
@@ -361,7 +393,7 @@ export default function CheckInOut() {
 
                   <Button
                     className="check-out-button group"
-                    disabled={!canCheckOut || actionLoading || geoLoading}
+                    disabled={!canCheckOut || todayRecord?.is_on_break || actionLoading || geoLoading}
                     onClick={() => handleAttendance('check_out')}
                   >
                     {actionLoading && canCheckOut ? (
@@ -374,27 +406,48 @@ export default function CheckInOut() {
                       <p className="text-[10px] font-bold text-muted-foreground tracking-widest mt-1">STOP TRACKING</p>
                     </div>
                   </Button>
+
+                  {canCheckOut && (
+                    <Button
+                      className={`break-action-button ${todayRecord?.is_on_break ? 'active' : ''}`}
+                      disabled={actionLoading}
+                      onClick={todayRecord?.is_on_break ? handleResumeBreak : handleStartBreak}
+                    >
+                      <Pause className={`w-12 h-12 ${todayRecord?.is_on_break ? 'animate-pulse text-indigo-400' : 'text-primary'}`} />
+                      <div className="text-center">
+                        <p className="text-2xl font-black uppercase tracking-tighter text-white">
+                          {todayRecord?.is_on_break ? 'Resume' : 'Break'}
+                        </p>
+                        <p className="text-[10px] font-bold text-muted-foreground tracking-widest mt-1">
+                          {todayRecord?.is_on_break ? 'BACK TO WORK' : 'TAKE A PAUSE'}
+                        </p>
+                      </div>
+                    </Button>
+                  )}
                 </div>
 
-                {todayRecord?.is_on_break && (
-                  <div className="break-info-panel">
-                    <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 rounded-[1.5rem] bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
-                        <Pause className="w-8 h-8" />
+                {todayRecord?.check_in && !todayRecord.check_out && (
+                  <div className={`break-status-card glass-card p-6 border-white/5 bg-white/2 ${todayRecord.is_on_break ? 'border-primary/30' : ''}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${todayRecord.is_on_break ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground'}`}>
+                          <Timer className={`w-6 h-6 ${todayRecord.is_on_break ? 'animate-spin-slow' : ''}`} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Break Time Used</p>
+                          <h4 className={`text-xl font-black ${getBreakTime() > 45 ? 'text-destructive' : 'text-white'}`}>
+                            {getBreakTime()} / 45 <span className="text-xs opacity-50 ml-1">mins</span>
+                          </h4>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-xl font-black text-white uppercase tracking-tighter">On Break</p>
-                        <p className="text-sm text-muted-foreground font-medium">Mandatory break is active. Timer is paused.</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        className="h-14 px-8 rounded-2xl bg-indigo-500 text-white hover:bg-indigo-600 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-500/20"
-                        onClick={handleResumeBreak}
-                        disabled={actionLoading}
-                      >
-                        Resume
-                      </Button>
+                      {getBreakTime() > 45 && (
+                        <Badge variant="destructive" className="animate-pulse">LIMIT EXCEEDED</Badge>
+                      )}
                     </div>
+                    <Progress 
+                      value={Math.min(100, (getBreakTime() / 45) * 100)} 
+                      className={`h-2 mt-4 ${getBreakTime() > 45 ? 'bg-destructive/20' : ''}`} 
+                    />
                   </div>
                 )}
               </CardContent>

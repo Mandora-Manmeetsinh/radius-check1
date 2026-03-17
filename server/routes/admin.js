@@ -435,10 +435,11 @@ router.get('/attendance/export', protect, admin, async (req, res) => {
             { header: 'Shift/Batch', key: 'shift', width: 20 },
             { header: 'Check In', key: 'check_in', width: 15 },
             { header: 'Check Out', key: 'check_out', width: 15 },
-            { header: 'Worked (Mins)', key: 'worked_minutes', width: 15 },
+            { header: 'Break (Mins)', key: 'break_minutes', width: 15 },
+            { header: 'Worked (Net Mins)', key: 'worked_minutes', width: 18 },
             { header: 'Work Mode', key: 'work_mode', width: 15 },
             { header: 'Status', key: 'status', width: 15 },
-            { header: 'Final Status', key: 'final_status', width: 15 },
+            { header: 'Violation', key: 'violation', width: 12 },
         ];
 
         worksheet.getRow(1).font = { bold: true };
@@ -456,12 +457,13 @@ router.get('/attendance/export', protect, admin, async (req, res) => {
                 email: user.email || 'N/A',
                 role: user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'N/A',
                 shift: user.role === 'intern' ? (user.batch ? user.batch.toUpperCase() : 'N/A') : (user.role === 'employee' ? 'OFFICE' : 'N/A'),
-                check_in: record.check_in ? new Date(record.check_in).toLocaleTimeString() : 'N/A',
-                check_out: record.check_out ? new Date(record.check_out).toLocaleTimeString() : 'N/A',
+                check_in: record.check_in ? new Date(record.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                check_out: record.check_out ? new Date(record.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                break_minutes: record.break_minutes || 0,
                 worked_minutes: record.worked_minutes || 0,
                 work_mode: record.work_mode ? record.work_mode.toUpperCase() : 'OFFICE',
-                status: record.status || 'N/A',
-                final_status: record.final_status || record.status || 'N/A',
+                status: (record.final_status || record.status || 'N/A').toUpperCase(),
+                violation: record.is_policy_violation ? 'YES' : 'NO',
             });
         };
 

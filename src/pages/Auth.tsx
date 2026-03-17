@@ -11,19 +11,42 @@ import { z } from 'zod';
 import '@/styles/Auth.css';
 import logo from '@/assets/logo.png';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import client from '@/api/client';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+const registerSchema = loginSchema.extend({
+  full_name: z.string().min(2, 'Full name is required'),
+});
+
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, user, isAdmin, loading } = useAuth();
+  const [adminExists, setAdminExists] = useState(true);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const { signIn, signUp, user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const { data } = await client.get('/auth/admin-exists');
+        setAdminExists(data.exists);
+        if (!data.exists) {
+          setIsRegistering(true);
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+      }
+    };
+    checkAdmin();
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -37,17 +60,34 @@ export default function Auth() {
     }
   }, [user, isAdmin, loading, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validation = loginSchema.safeParse({ email: loginEmail, password: loginPassword });
-    if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
-      return;
+    
+    if (isRegistering) {
+      const validation = registerSchema.safeParse({ 
+        email: loginEmail, 
+        password: loginPassword,
+        full_name: fullName 
+      });
+      if (!validation.success) {
+        toast.error(validation.error.errors[0].message);
+        return;
+      }
+    } else {
+      const validation = loginSchema.safeParse({ email: loginEmail, password: loginPassword });
+      if (!validation.success) {
+        toast.error(validation.error.errors[0].message);
+        return;
+      }
     }
 
     setIsLoading(true);
     try {
-      await signIn(loginEmail, loginPassword);
+      if (isRegistering) {
+        await signUp(loginEmail, loginPassword, fullName);
+      } else {
+        await signIn(loginEmail, loginPassword);
+      }
     } catch (error: any) {
       // Handled in useAuth
     } finally {
@@ -124,11 +164,32 @@ export default function Auth() {
 
             <Card className="auth-form-card">
               <CardHeader className="auth-form-header">
-                <CardTitle>Sign In</CardTitle>
-                <CardDescription>Enter your credentials to access your account</CardDescription>
+                <CardTitle>{isRegistering ? 'Admin Registration' : 'Sign In'}</CardTitle>
+                <CardDescription>
+                  {isRegistering 
+                    ? 'Create the first administrator account to set up your system' 
+                    : 'Enter your credentials to access your account'}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleLogin} className="space-y-6">
+                <form onSubmit={handleAuth} className="space-y-6">
+                  {isRegistering && (
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName" className="text-[10px] uppercase font-bold tracking-widest ml-1">Full Name</Label>
+                      <div className="auth-input-group">
+                        <ArrowRight className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground rotate-[-45deg]" />
+                        <Input
+                          id="fullName"
+                          type="text"
+                          placeholder="Admin User"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className="h-14 pl-12 bg-muted/50 border-border rounded-2xl focus:ring-primary/20"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-[10px] uppercase font-bold tracking-widest ml-1">Email Address</Label>
                     <div className="auth-input-group">
@@ -169,14 +230,26 @@ export default function Auth() {
                     </div>
                   </div>
                   <Button type="submit" className="auth-submit-btn" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4 ml-1" /></>}
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>
+                      {isRegistering ? 'Create Admin Account' : 'Continue'} <ArrowRight className="w-4 h-4 ml-1" />
+                    </>}
                   </Button>
                 </form>
 
-                <div className="auth-footer-text">
-                  <p>Secured by Enterprise Infrastructure</p>
-                  <p className="mt-1">Contact your manager if you've lost access.</p>
-                </div>
+                {adminExists && (
+                  <div className="auth-footer-text">
+                    <p>Secured by Enterprise Infrastructure</p>
+                    <p className="mt-1">Contact your manager if you've lost access.</p>
+                  </div>
+                )}
+                
+                {!adminExists && (
+                  <div className="mt-6 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                    <p className="text-xs font-medium text-center text-primary">
+                      SYSTEM SETUP MODE: No administrator found. Please create the first account.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

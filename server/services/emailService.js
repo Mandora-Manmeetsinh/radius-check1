@@ -28,27 +28,66 @@ export const sendEmail = async (to, subject, text) => {
     }
 };
 
+const formatDate = (date) => date.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+const formatTime = (date) => date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
 export const sendCheckInReminder = async (user) => {
-    const message = `Hi ${user.full_name}, reminder to check-in for your shift starting in 5 minutes.`;
-    return sendEmail(user.email, 'Check-in Reminder', message);
+    const subject = 'Friendly Reminder: Shift Starting Soon';
+    const message = `Hello ${user.full_name},
+
+Your shift is scheduled to begin in 5 minutes. Please remember to check-in using the Radius Check portal once you are within the designated zone.
+
+Have a productive day!
+
+Best regards,
+Radius Check System`;
+    return sendEmail(user.email, subject, message);
 };
 
 export const sendCheckInConfirmation = async (user, checkInTime) => {
-    const message = `Hi ${user.full_name}, you checked in successfully at ${checkInTime.toLocaleTimeString()}.`;
-    return sendEmail(user.email, 'Check-in Confirmation', message);
+    const subject = 'Check-In Confirmation';
+    const message = `Hello ${user.full_name},
+
+This is to confirm that you have successfully checked in today, ${formatDate(checkInTime)}, at ${formatTime(checkInTime)}.
+
+Your attendance has been recorded.
+
+Best regards,
+Radius Check System`;
+    return sendEmail(user.email, subject, message);
 };
 
 export const sendBreakEndingReminder = async (user) => {
-    const message = `Hi ${user.full_name}, break time is over. Please resume your work timer.`;
-    return sendEmail(user.email, 'Break Ending Reminder', message);
+    const subject = 'Break Period Conclusion';
+    const message = `Hello ${user.full_name},
+
+Your scheduled break period has concluded. Please return to the Radius Check portal to resume your work timer.
+
+Thank you,
+Radius Check System`;
+    return sendEmail(user.email, subject, message);
 };
 
 export const sendCheckOutReminder = async (user) => {
-    const message = `Hi ${user.full_name}, it looks like you forgot to check-out. Please remember to check-out for the day.`;
-    return sendEmail(user.email, 'Forgot Check-out Reminder', message);
+    const subject = 'Action Required: Pending Check-Out';
+    const message = `Hello ${user.full_name},
+
+Our records show that your shift has ended, but you have not yet checked out. Please log in to Radius Check to record your departure and ensure your work hours are accurately logged.
+
+Regards,
+Radius Check System`;
+    return sendEmail(user.email, subject, message);
 };
 
 export const sendCheckOutConfirmation = async (user, checkOutTime) => {
-    const message = `Hi ${user.full_name}, you have checked out successfully at ${checkOutTime.toLocaleTimeString()}. Have a great day!`;
-    return sendEmail(user.email, 'Check-out Confirmation', message);
+    const subject = 'Check-Out Confirmation';
+    const message = `Hello ${user.full_name},
+
+You have successfully checked out for the day at ${formatTime(checkOutTime)}. 
+
+Thank you for your hard work today. We hope you have a relaxing evening!
+
+Best regards,
+Radius Check System`;
+    return sendEmail(user.email, subject, message);
 };
