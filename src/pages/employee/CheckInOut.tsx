@@ -431,7 +431,7 @@ export default function CheckInOut() {
                           {todayRecord?.is_on_break ? 'Resume' : 'Break'}
                         </p>
                         <p className="text-[10px] font-bold text-muted-foreground tracking-widest mt-1">
-                          {todayRecord?.is_on_break ? 'BACK TO WORK' : 'TAKE A PAUSE'}
+                          {todayRecord?.is_on_break ? '' : ''}
                         </p>
                       </div>
                     </Button>
