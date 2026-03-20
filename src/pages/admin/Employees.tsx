@@ -224,6 +224,18 @@ export default function AdminEmployees() {
     }
   };
 
+  const handlePromoteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to promote ${userName} to a full-time Employee?`)) return;
+    
+    try {
+      await client.put(`/admin/users/${userId}`, { role: 'employee' });
+      toast.success(`${userName} has been promoted to Employee!`);
+      fetchEmployees();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to promote user');
+    }
+  };
+
   const filteredEmployees = employees.filter(emp =>
     emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -579,6 +591,15 @@ export default function AdminEmployees() {
                                 <UserCircle className="w-4 h-4 mr-2" />
                                 Edit Details
                             </DropdownMenuItem>
+                            {emp.role === 'intern' && (
+                              <DropdownMenuItem 
+                                onClick={() => handlePromoteUser(emp._id, emp.full_name)}
+                                className="text-success focus:text-success"
+                              >
+                                <Shield className="w-4 h-4 mr-2" />
+                                Promote to Employee
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
@@ -712,6 +733,15 @@ export default function AdminEmployees() {
                                   Reset Password
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>View Profile</DropdownMenuItem>
+                                {emp.role === 'intern' && (
+                                  <DropdownMenuItem 
+                                    onClick={() => handlePromoteUser(emp._id, emp.full_name)}
+                                    className="text-success focus:text-success"
+                                  >
+                                    <Shield className="w-4 h-4 mr-2" />
+                                    Promote to Employee
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-destructive focus:text-destructive"

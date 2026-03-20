@@ -7,6 +7,13 @@
     max-width: 56rem;
     /* max-w-4xl */
     margin: 0 auto;
+    padding: 2rem;
+    border-radius: 1rem;
+    background-color: hsla(var(--muted), 0.3);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px dashed var(--border);
+    border-color: hsla(var(--border), 0.5);
+    border-width: 2px;
 }
 
 .settings-header {
@@ -27,18 +34,31 @@
     display: grid;
     width: 100%;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
     margin-bottom: 1.5rem;
+    border-radius: 1rem;
+    background-color: hsla(var(--muted), 0.3);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px dashed var(--border);
+    border-color: hsla(var(--border), 0.5);
+    border-width: 2px;
 }
 
 @media (min-width: 1024px) {
     .settings-tabs-list {
-        width: 400px;
+        width: 500px;
     }
 }
 
 .settings-card {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
     border-color: hsla(var(--border), 0.5);
+    border-radius: 1rem;
+    background-color: hsla(var(--muted), 0.3);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px dashed var(--border);
+    border-color: hsla(var(--border), 0.5);
+    border-width: 2px;
 }
 
 .settings-grid {

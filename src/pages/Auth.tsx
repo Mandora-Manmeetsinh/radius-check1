@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,12 +62,12 @@ export default function Auth() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isRegistering) {
-      const validation = registerSchema.safeParse({ 
-        email: loginEmail, 
+      const validation = registerSchema.safeParse({
+        email: loginEmail,
         password: loginPassword,
-        full_name: fullName 
+        full_name: fullName
       });
       if (!validation.success) {
         toast.error(validation.error.errors[0].message);
@@ -88,7 +88,7 @@ export default function Auth() {
       } else {
         await signIn(loginEmail, loginPassword);
       }
-    } catch (error: any) {
+    } catch (error) {
       // Handled in useAuth
     } finally {
       setIsLoading(false);
@@ -118,7 +118,7 @@ export default function Auth() {
 
           <div className="space-y-8 mt-12 bg-muted/20 p-10 rounded-[3rem] border border-border backdrop-blur-xl relative overflow-hidden group">
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-1000"></div>
-            
+
             <div className="relative space-y-6">
               <h2 className="hero-title">
                 Precision Attendance <br />
@@ -142,10 +142,10 @@ export default function Auth() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4 px-6 py-4 rounded-2xl bg-primary/5 border border-primary/10 w-fit">
             <div className="flex -space-x-3">
-              {[1,2,3,4].map(i => (
+              {[1, 2, 3, 4].map(i => (
                 <div key={i} className="w-10 h-10 rounded-full border-4 border-background bg-muted flex items-center justify-center text-[10px] font-bold overflow-hidden">
                   {i === 4 ? '+50' : <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20" />}
                 </div>
@@ -166,8 +166,8 @@ export default function Auth() {
               <CardHeader className="auth-form-header">
                 <CardTitle>{isRegistering ? 'Admin Registration' : 'Sign In'}</CardTitle>
                 <CardDescription>
-                  {isRegistering 
-                    ? 'Create the first administrator account to set up your system' 
+                  {isRegistering
+                    ? 'Create the first administrator account to set up your system'
                     : 'Enter your credentials to access your account'}
                 </CardDescription>
               </CardHeader>
@@ -228,6 +228,13 @@ export default function Auth() {
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </Button>
                     </div>
+                    {!isRegistering && (
+                      <div className="flex justify-end mt-1">
+                        <Link to="/forgot-password" className="text-xs font-semibold text-primary hover:underline">
+                          Forgot Password?
+                        </Link>
+                      </div>
+                    )}
                   </div>
                   <Button type="submit" className="auth-submit-btn" disabled={isLoading}>
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>
@@ -242,7 +249,7 @@ export default function Auth() {
                     <p className="mt-1">Contact your manager if you've lost access.</p>
                   </div>
                 )}
-                
+
                 {!adminExists && (
                   <div className="mt-6 p-4 rounded-xl bg-primary/5 border border-primary/10">
                     <p className="text-xs font-medium text-center text-primary">

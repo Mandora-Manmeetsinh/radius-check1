@@ -15,6 +15,8 @@ import AdminEmployees from "./pages/admin/Employees";
 import AdminAttendance from "./pages/admin/Attendance";
 import AdminSettings from "./pages/admin/Settings";
 import NotFound from "./pages/NotFound";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
 import { Analytics } from "@vercel/analytics/react"
 
@@ -49,6 +51,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/" element={<Navigate to="/auth" replace />} />
       <Route path="/change-password" element={<ChangePasswordRoute><ChangePassword /></ChangePasswordRoute>} />
       <Route path="/employee" element={<ProtectedRoute><CheckInOut /></ProtectedRoute>} />

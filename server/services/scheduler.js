@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import User from '../models/User.js';
 import Attendance from '../models/Attendance.js';
 import ShiftConfig from '../models/ShiftConfig.js';
+import Holiday from '../models/Holiday.js';
 import { sendCheckInReminder, sendBreakEndingReminder, sendCheckOutReminder } from './emailService.js';
 
 const initScheduler = () => {
@@ -10,6 +11,13 @@ const initScheduler = () => {
     // 10:25 AM — remind employees and batch 1 interns to check in
     cron.schedule('25 10 * * *', async () => {
         try {
+            const today = new Date().toISOString().split('T')[0];
+            const isHoliday = await Holiday.findOne({ date: today });
+            if (isHoliday) {
+                console.log(`Skipping check-in reminder: Today is holiday (${isHoliday.name})`);
+                return;
+            }
+
             const users = await User.find({
                 role: { $in: ['employee', 'intern'] },
                 $or: [{ role: 'employee' }, { role: 'intern', batch: 'batch1' }]

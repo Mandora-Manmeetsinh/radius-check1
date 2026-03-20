@@ -84,6 +84,12 @@ const userSchema = new mongoose.Schema({
     temp_password_created_at: {
         type: Date,
     },
+    reset_password_token: {
+        type: String,
+    },
+    reset_password_expires: {
+        type: Date,
+    },
 }, {
     timestamps: true,
 });

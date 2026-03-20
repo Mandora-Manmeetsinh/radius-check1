@@ -2,6 +2,7 @@ import express from 'express';
 import User from '../models/User.js';
 import Attendance from '../models/Attendance.js';
 import SystemSettings from '../models/SystemSettings.js';
+import Holiday from '../models/Holiday.js';
 import ExcelJS from 'exceljs';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
@@ -9,7 +10,7 @@ const router = express.Router();
 
 router.get('/dashboard/stats', protect, admin, async (req, res) => {
     try {
-        const totalEmployees = await User.countDocuments({ role: 'employee' });
+        const totalEmployees = await User.countDocuments({ role: { $ne: 'admin' } });
 
         const today = new Date().toISOString().split('T')[0];
         const attendanceToday = await Attendance.find({ date: today });
@@ -19,13 +20,17 @@ router.get('/dashboard/stats', protect, admin, async (req, res) => {
         const earlyExit = attendanceToday.filter(a => a.status === 'early_exit').length;
         const checkedInCount = attendanceToday.length;
         const absent = totalEmployees - checkedInCount;
+        
+        const isHoliday = await Holiday.findOne({ date: today });
 
         res.json({
             total: totalEmployees,
             present,
             late,
-            absent: absent < 0 ? 0 : absent,
-            earlyExit
+            absent: isHoliday ? 0 : (absent < 0 ? 0 : absent),
+            earlyExit,
+            isHoliday: !!isHoliday,
+            holidayName: isHoliday ? isHoliday.name : null
         });
     } catch (error) {
         console.error(error);
@@ -42,13 +47,17 @@ router.get('/dashboard/weekly', protect, admin, async (req, res) => {
             const dateStr = d.toISOString().split('T')[0];
             const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
 
-            const attendance = await Attendance.find({ date: dateStr });
+            const [attendance, isHoliday] = await Promise.all([
+                Attendance.find({ date: dateStr }),
+                Holiday.findOne({ date: dateStr })
+            ]);
 
             weeklyData.push({
                 day: dayName,
                 present: attendance.filter(a => a.status === 'present').length,
                 late: attendance.filter(a => a.status === 'late' || a.status === 'early_exit').length,
-                absent: 0
+                absent: 0,
+                isHoliday: !!isHoliday
             });
         }
         res.json(weeklyData);
@@ -142,6 +151,54 @@ router.get('/employees', protect, admin, async (req, res) => {
         res.json(employees);
     } catch (error) {
         console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// Holiday Management
+router.get('/holidays', protect, admin, async (req, res) => {
+    try {
+        const holidays = await Holiday.find().sort({ date: 1 });
+        res.json(holidays);
+    } catch (error) {
+        console.error('Error fetching holidays', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.post('/holidays', protect, admin, async (req, res) => {
+    const { date, name } = req.body;
+    try {
+        if (!date || !name) return res.status(400).json({ message: 'Date and name are required' });
+        
+        const existing = await Holiday.findOne({ date });
+        if (existing) {
+            return res.status(400).json({ message: 'A holiday already exists for this date' });
+        }
+
+        const holiday = await Holiday.create({
+            date,
+            name,
+            createdBy: req.user._id
+        });
+
+        res.status(201).json(holiday);
+    } catch (error) {
+        console.error('Error creating holiday', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.delete('/holidays/:id', protect, admin, async (req, res) => {
+    try {
+        const holiday = await Holiday.findById(req.params.id);
+        if (!holiday) {
+            return res.status(404).json({ message: 'Holiday not found' });
+        }
+        await Holiday.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Holiday removed successfully' });
+    } catch (error) {
+        console.error('Error deleting holiday', error);
         res.status(500).json({ message: 'Server Error' });
     }
 });

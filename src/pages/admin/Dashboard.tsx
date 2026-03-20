@@ -59,7 +59,8 @@ export default function AdminDashboard() {
         setRecentRecords(activityRes.data);
 
         const { present, late, total } = statsRes.data;
-        setAttendanceRate(total > 0 ? Math.round(((present + late) / total) * 100) : 0);
+        const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
+        setAttendanceRate(Math.min(100, rate));
       } catch (error) {
         console.error('Error fetching dashboard data', error);
       } finally {

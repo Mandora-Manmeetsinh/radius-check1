@@ -187,8 +187,42 @@ router.post('/check-in', protect, async (req, res) => {
             work_mode: work_mode
         });
 
-        sendCheckInConfirmation(user, new Date());
+        // Update User streak and total attendance
+        const lastCheckInDate = user.last_check_in ? new Date(user.last_check_in) : null;
+        const todayDate = new Date();
+        todayDate.setHours(0,0,0,0);
+        
+        let newStreak = user.current_streak || 0;
+        
+        if (lastCheckInDate) {
+            lastCheckInDate.setHours(0,0,0,0);
+            const diffTime = Math.abs(todayDate - lastCheckInDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 1) {
+                newStreak += 1;
+            } else if (diffDays > 1) {
+                if (todayDate.getDay() === 1 && lastCheckInDate.getDay() === 5 && diffDays === 3) {
+                    newStreak += 1;
+                } else if (todayDate.getDay() === 1 && lastCheckInDate.getDay() === 6 && diffDays === 2) {
+                    newStreak += 1;
+                } else {
+                    newStreak = 1;
+                }
+            }
+        } else {
+            newStreak = 1;
+        }
+        
+        user.current_streak = newStreak;
+        if (newStreak > (user.best_streak || 0)) {
+            user.best_streak = newStreak;
+        }
+        user.last_check_in = new Date();
+        user.total_attendance = (user.total_attendance || 0) + 1;
+        await user.save();
 
+        sendCheckInConfirmation(user, new Date());
 
         res.status(201).json({
             success: true,
@@ -322,7 +356,7 @@ router.post('/start-break', protect, async (req, res) => {
         }
 
         const totalBreakMinutes = attendance.break_minutes || 0;
-        if (totalBreakMinutes >= 45) {
+        if (req.user.role === 'employee' && totalBreakMinutes >= 45) {
             return res.status(400).json({ message: 'Daily break limit (45 minutes) reached' });
         }
 
