@@ -1,0 +1,21 @@
+# Disable directory browsing
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Handle /api prefix
+    # If your backend is running on port 5000 on the same server,
+    # this rule will proxy the request to the backend.
+    # Note: mod_proxy must be enabled on the server.
+    RewriteRule ^api/(.*)$ http://localhost:5000/api/$1 [P,L]
+
+    # Handle the SPA routing for the frontend
+    # If the requested file or directory doesn't exist, served index.html
+    RewriteRule ^index\.html$ - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-l
+    RewriteRule . /index.html [L]
+</IfModule>

@@ -18,7 +18,7 @@ import NotFound from "./pages/NotFound";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
-import { Analytics } from "@vercel/analytics/react"
+
 
 const queryClient = new QueryClient();
 
@@ -74,7 +74,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Analytics />
+
           <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
